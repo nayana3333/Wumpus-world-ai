@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+
+# The trained Q-table IS committed on purpose: it is the agent, and retraining
+# it takes about two minutes. See "python -m wumpus_ai.rl" to regenerate.

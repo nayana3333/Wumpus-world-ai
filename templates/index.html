@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wumpus World</title>
+<meta name="description" content="Wumpus World with a knowledge-based agent: DPLL entailment, Bayesian model counting, and a Q-learning agent for comparison.">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>W</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>Wumpus World</h1>
+    <p>knowledge-based agent &amp; reinforcement learning</p>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="difficulty" id="difficulty">
+      <button class="chip" data-diff="easy">Easy</button>
+      <button class="chip is-active" data-diff="classic">Classic 4x4</button>
+      <button class="chip" data-diff="hard">6x6</button>
+      <button class="chip" data-diff="nightmare">8x8</button>
+    </div>
+    <button class="btn" id="btnBenchmark">Benchmark</button>
+    <button class="btn" id="btnTrain">Train RL</button>
+    <button class="btn" id="btnHelp">Rules</button>
+    <button class="btn" id="btnSound" aria-pressed="true">Sound: on</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <aside class="col col-left">
+    <section class="card">
+      <h2 class="card-title">Cave setup</h2>
+      <div class="field-row">
+        <label class="field"><span>Size</span><input type="number" id="inpSize" min="3" max="12" value="4"></label>
+        <label class="field"><span>Pits</span><input type="number" id="inpPits" min="0" max="40" value="3"></label>
+      </div>
+      <label class="field">
+        <span>Seed <em>(blank = random)</em></span>
+        <div class="seed-row">
+          <input type="text" id="inpSeed" placeholder="random" inputmode="numeric">
+          <button class="btn tiny" id="btnCopySeed" title="Copy seed">copy</button>
+        </div>
+      </label>
+      <button class="btn primary block" id="btnNew">New cave</button>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Agent</h2>
+      <div class="agent-list" id="agentList"></div>
+
+      <div class="ai-buttons">
+        <button class="btn" id="btnHint" title="Ask the agent what it would do (H)">Hint</button>
+        <button class="btn" id="btnStep" title="One action (Space)">Step</button>
+        <button class="btn" id="btnSolve" title="Play the rest out">Solve</button>
+        <button class="btn accent" id="btnAuto" title="Let the agent play (Enter)">Auto play</button>
+      </div>
+
+      <label class="field slider-field">
+        <span>Speed <b id="speedLabel">normal</b></span>
+        <input type="range" id="inpSpeed" min="60" max="1200" step="20" value="420">
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" id="tglVision" checked>
+        <span>Shade squares by inferred risk</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="tglNumbers" checked>
+        <span>Show P(pit) and P(Wumpus)</span>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Your record</h2>
+      <div class="stat-grid">
+        <div class="stat"><b id="stGames">0</b><span>played</span></div>
+        <div class="stat"><b id="stWins">0</b><span>won</span></div>
+        <div class="stat"><b id="stBest">-</b><span>best</span></div>
+        <div class="stat"><b id="stStreak">0</b><span>streak</span></div>
+      </div>
+      <button class="btn tiny block" id="btnResetStats">Reset</button>
+    </section>
+  </aside>
+
+  <section class="col col-centre">
+    <div class="hud">
+      <div class="hud-item score" title="+1000 escape with gold, -1000 death, -10 arrow, -1 per action">
+        <span class="hud-label">Score</span><b id="hudScore">0</b>
+      </div>
+      <div class="hud-item"><span class="hud-label">Moves</span><b id="hudSteps">0</b></div>
+      <div class="hud-item"><span class="hud-label">Arrow</span><b id="hudArrow">1</b></div>
+      <div class="hud-item"><span class="hud-label">Gold</span><b id="hudGold">-</b></div>
+      <div class="hud-item"><span class="hud-label">Wumpus</span><b id="hudWumpus">alive</b></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <svg class="trail" id="trail" aria-hidden="true"></svg>
+        <div class="grid" id="grid"></div>
+        <div class="agent-token" id="agentToken" aria-hidden="true">
+          <span class="token-face">@</span>
+        </div>
+        <div class="arrow-fx" id="arrowFx" aria-hidden="true"></div>
+      </div>
+
+      <div class="overlay" id="overlay" hidden>
+        <div class="overlay-card">
+          <div class="overlay-emoji" id="ovEmoji"></div>
+          <h2 id="ovTitle"></h2>
+          <p id="ovText"></p>
+          <div class="overlay-score"><span>final score</span><b id="ovScore">0</b></div>
+          <div class="overlay-actions">
+            <button class="btn primary" id="btnPlayAgain">New cave</button>
+            <button class="btn" id="btnRetrySeed">Same cave again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="status-line" id="statusLine">Ready.</p>
+
+    <div class="pad">
+      <div class="dpad">
+        <button class="dbtn up" data-dir="up" aria-label="Move up">&uarr;</button>
+        <button class="dbtn left" data-dir="left" aria-label="Move left">&larr;</button>
+        <button class="dbtn mid" id="btnGrab" aria-label="Grab" title="Grab (G)">grab</button>
+        <button class="dbtn right" data-dir="right" aria-label="Move right">&rarr;</button>
+        <button class="dbtn down" data-dir="down" aria-label="Move down">&darr;</button>
+      </div>
+
+      <div class="pad-actions">
+        <div class="shoot-block">
+          <span class="pad-label">Shoot arrow</span>
+          <div class="shoot-row">
+            <button class="btn danger" data-shoot="up">&uarr;</button>
+            <button class="btn danger" data-shoot="left">&larr;</button>
+            <button class="btn danger" data-shoot="down">&darr;</button>
+            <button class="btn danger" data-shoot="right">&rarr;</button>
+          </div>
+        </div>
+        <button class="btn primary tall" id="btnClimb">Climb out</button>
+        <button class="btn tall" id="btnReveal">Reveal map</button>
+      </div>
+
+      <p class="keys">
+        <kbd>arrows</kbd> move &middot; <kbd>G</kbd> grab &middot; <kbd>C</kbd> climb &middot;
+        <kbd>shift</kbd>+arrow shoot &middot; <kbd>space</kbd> AI step &middot;
+        <kbd>H</kbd> hint &middot; <kbd>N</kbd> new cave
+      </p>
+    </div>
+  </section>
+
+  <aside class="col col-right">
+    <section class="card">
+      <h2 class="card-title">Percepts here</h2>
+      <ul class="percepts" id="percepts">
+        <li data-p="stench"><span class="p-ico">&#128994;</span><span class="p-name">Stench</span><span class="p-hint">Wumpus adjacent</span></li>
+        <li data-p="breeze"><span class="p-ico">&#128168;</span><span class="p-name">Breeze</span><span class="p-hint">pit adjacent</span></li>
+        <li data-p="glitter"><span class="p-ico">&#10024;</span><span class="p-name">Glitter</span><span class="p-hint">gold here</span></li>
+        <li data-p="bump"><span class="p-ico">&#129521;</span><span class="p-name">Bump</span><span class="p-hint">hit a wall</span></li>
+        <li data-p="scream"><span class="p-ico">&#128561;</span><span class="p-name">Scream</span><span class="p-hint">Wumpus died</span></li>
+      </ul>
+    </section>
+
+    <section class="card" id="adviceCard" hidden>
+      <h2 class="card-title">Agent suggests</h2>
+      <div class="advice">
+        <div class="advice-action" id="adviceAction"></div>
+        <p id="adviceReason"></p>
+        <div class="confidence">
+          <span>confidence</span>
+          <div class="conf-bar"><i id="confBar"></i></div>
+          <b id="confPct">0%</b>
+        </div>
+      </div>
+    </section>
+
+    <section class="card grow">
+      <div class="tabs">
+        <button class="tab is-active" data-tab="log">Reasoning</button>
+        <button class="tab" data-tab="risk">Risk</button>
+        <button class="tab" data-tab="proof">Proof</button>
+      </div>
+
+      <div class="tab-panel is-active" data-panel="log">
+        <ol class="log" id="log"></ol>
+      </div>
+
+      <div class="tab-panel" data-panel="risk">
+        <div class="risk-legend">
+          <span><i class="sw safe"></i>proved safe</span>
+          <span><i class="sw warn"></i>uncertain</span>
+          <span><i class="sw bad"></i>proved deadly</span>
+        </div>
+        <div class="risk-table-wrap"><table class="risk-table" id="riskTable"></table></div>
+      </div>
+
+      <div class="tab-panel" data-panel="proof">
+        <div id="proofBody">
+          <p class="proof-hint">Click any square on the board to see what the CNF knowledge base can prove about it, and the resolution steps that get there.</p>
+        </div>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-card">
+    <button class="modal-x" data-close>&times;</button>
+    <h2>How it works</h2>
+
+    <div class="help-grid">
+      <div>
+        <h3>Goal</h3>
+        <p>You start bottom-left in a dark N&times;N cave. Find the gold, carry it back to the start square, climb out. You only ever see the square you are standing in.</p>
+      </div>
+      <div>
+        <h3>Percepts</h3>
+        <ul>
+          <li><b>Stench</b> - Wumpus in an adjacent square</li>
+          <li><b>Breeze</b> - pit in an adjacent square</li>
+          <li><b>Glitter</b> - gold in this square</li>
+          <li><b>Bump</b> - you walked into a wall</li>
+          <li><b>Scream</b> - your arrow hit the Wumpus</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Actions</h3>
+        <ul>
+          <li>Move to an adjacent square</li>
+          <li>Grab the gold when it glitters</li>
+          <li>Shoot your one arrow along a row or column</li>
+          <li>Climb out, only from the start square</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Score</h3>
+        <ul>
+          <li>+1000 climb out holding the gold</li>
+          <li>-1000 die</li>
+          <li>-10 fire the arrow</li>
+          <li>-1 every action</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="help-sub">The agents</h3>
+    <div class="help-grid">
+      <div>
+        <h4>Logic</h4>
+        <p>Percepts go into a CNF knowledge base. DPLL answers "is a pit here entailed?" by testing whether the KB plus the opposite is unsatisfiable. The Proof tab shows the resolution steps.</p>
+        <p>Because there is exactly one Wumpus, "stench at X iff Wumpus adjacent to X" is a biconditional, so a few percepts often pin it to one square.</p>
+      </div>
+      <div>
+        <h4>Probability</h4>
+        <p>When nothing is provably safe, the agent counts models: every pit layout on the frontier consistent with every breeze, weighted by the prior. That gives P(pit) per square, and it moves to the lowest one under its risk threshold.</p>
+      </div>
+      <div>
+        <h4>Q-learning</h4>
+        <p>Told none of the above. It sees a state key and a reward and has to work out that breezes are bad. Use the Train RL button to watch the learning curve.</p>
+      </div>
+      <div>
+        <h4>Reflex / random</h4>
+        <p>Baselines. The reflex agent applies a single one-step safety rule and has no plan, so it frequently gets stuck walking back and forth.</p>
+      </div>
+    </div>
+
+    <button class="btn primary block" data-close>Close</button>
+  </div>
+</div>
+
+<div class="modal" id="benchModal" hidden>
+  <div class="modal-card wide">
+    <button class="modal-x" data-close>&times;</button>
+    <h2>Benchmark</h2>
+    <p class="modal-sub">Every agent plays the same sequence of caves, so the difference is the agent rather than luck.</p>
+
+    <div class="bench-controls">
+      <label class="field"><span>Episodes</span><input type="number" id="bmEpisodes" value="150" min="5" max="1000" step="5"></label>
+      <label class="field"><span>Size</span><input type="number" id="bmSize" value="4" min="3" max="8"></label>
+      <label class="field"><span>Pits</span><input type="number" id="bmPits" value="3" min="0" max="20"></label>
+      <button class="btn primary" id="btnRunBench">Run</button>
+    </div>
+
+    <div class="bench-body">
+      <div class="bench-chart" id="benchChart"></div>
+      <div class="bench-table-wrap"><table class="bench-table" id="benchTable"></table></div>
+    </div>
+    <p class="bench-note" id="benchNote">4x4 with 3 pits is the textbook setup. Raise the pit count to see the logic agent refuse to gamble while the probabilistic one keeps going.</p>
+  </div>
+</div>
+
+<div class="modal" id="trainModal" hidden>
+  <div class="modal-card wide">
+    <button class="modal-x" data-close>&times;</button>
+    <h2>Train the Q-learning agent</h2>
+    <p class="modal-sub">Trains a fresh Q-table from zero on random caves and plots average score per block of episodes. The bundled agent was trained the same way, just for longer.</p>
+
+    <div class="bench-controls">
+      <label class="field"><span>Episodes</span><input type="number" id="trEpisodes" value="12000" min="500" max="40000" step="500"></label>
+      <label class="field"><span>Size</span><input type="number" id="trSize" value="4" min="3" max="6"></label>
+      <label class="field"><span>Pits</span><input type="number" id="trPits" value="3" min="0" max="10"></label>
+      <button class="btn primary" id="btnRunTrain">Train</button>
+    </div>
+
+    <div class="curve-wrap"><svg class="curve" id="curve" preserveAspectRatio="none"></svg></div>
+    <div class="curve-legend">
+      <span><i class="l-score"></i>average score</span>
+      <span><i class="l-eps"></i>exploration rate (epsilon)</span>
+    </div>
+    <p class="train-summary" id="trainSummary">Not trained yet in this browser session.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
