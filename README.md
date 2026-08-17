@@ -20,7 +20,7 @@
 
 ## What this is
 
-[Wumpus World](https://en.wikipedia.org/wiki/Wumpus_(video_game)) is the classic partially-observable, hostile-environment problem from Russell & Norvig's *Artificial Intelligence: A Modern Approach* (chapter 7). An agent is dropped into a dark cave holding one arrow. Somewhere in it: bottomless pits, a Wumpus, and gold. The agent can only sense the square it's standing on. Get it wrong and you die; get it right and you walk out rich.
+[Wumpus World](https://en.wikipedia.org/wiki/Wumpus_%28video_game%29) is the classic partially-observable, hostile-environment problem from Russell & Norvig's *Artificial Intelligence: A Modern Approach* (chapter 7). An agent is dropped into a dark cave holding one arrow. Somewhere in it: bottomless pits, a Wumpus, and gold. The agent can only sense the square it's standing on. Get it wrong and you die; get it right and you walk out rich.
 
 Most implementations of this problem stop at "the agent reads the map." **This one doesn't let the agent see anything except a five-bit percept vector**, and it builds the actual inference machinery a textbook agent needs to survive on that alone:
 
