@@ -53,7 +53,6 @@ It ships as a small Flask app with a dependency-free vanilla-JS front end — no
 - [Engineering notes](#engineering-notes)
 - [Assumptions & limitations](#assumptions-limitations)
 - [Roadmap](#roadmap)
-- [License](#license)
 
 ---
 
@@ -449,17 +448,3 @@ A few decisions that came out of an actual review pass on this codebase, not jus
 - [ ] A moving-Wumpus variant — turns the stench biconditional into a temporal one and breaks the "visited squares are permanently safe" assumption.
 - [ ] CSV/JSON export from the benchmark lab for offline analysis.
 - [ ] Multi-Wumpus support (relaxes the "exactly one" axiom that currently drives most of the logical pruning).
-
----
-
-## License
-
-[MIT](LICENSE) — use it, fork it, put it in a report, whatever's useful.
-
-Built against Russell & Norvig, *Artificial Intelligence: A Modern Approach*, chapter 7 (Wumpus World) and chapter 13 (probabilistic reasoning).
-
-<div align="center">
-
-If this was useful, a ⭐ on the repo is appreciated.
-
-</div>
