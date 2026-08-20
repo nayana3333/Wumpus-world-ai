@@ -7,6 +7,9 @@ env/
 .claude/
 .vscode/
 .idea/
+
+# Personal interview-prep notes -- not project documentation, kept local only.
+interview-prep/
 .DS_Store
 Thumbs.db
 
