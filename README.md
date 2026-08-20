@@ -7,7 +7,6 @@
 [![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/flask-3.0-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![Tests](https://img.shields.io/badge/tests-26%20passing-2ea44f?logo=pytest&logoColor=white)](tests/test_wumpus.py)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![No build step](https://img.shields.io/badge/frontend-vanilla%20JS%2C%20no%20build%20step-informational)](static/js/app.js)
 
 [Live demo](#quickstart) · [How it works](#how-it-works) · [Results](#results) · [Screenshots](#screenshots) · [API](#api-reference)
@@ -383,7 +382,6 @@ wumpus-world-ai/
 ├── app.py                    # Flask routes — thin; owns session storage & locking only
 ├── requirements.txt
 ├── run.bat                   # one-click Windows launcher
-├── LICENSE
 │
 ├── wumpus_ai/                 # everything that isn't presentation
 │   ├── world.py               # WumpusWorld: cave generation, percepts, actions, scoring
