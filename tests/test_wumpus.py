@@ -151,7 +151,7 @@ class TestAgents(unittest.TestCase):
     def test_logic_agent_never_dies(self):
         """With zero risk tolerance the agent should be empirically immortal."""
         deaths = [
-            seed for seed in range(400)
+            seed for seed in range(1000)
             if run_episode(make_agent("logic"), size=4, pits=3, seed=seed)["outcome"] in ("pit", "wumpus")
         ]
         self.assertEqual(deaths, [], f"logic agent died on seeds {deaths[:5]}")
